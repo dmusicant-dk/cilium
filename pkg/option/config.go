@@ -550,6 +550,10 @@ const (
 	// load loggging
 	LogSystemLoadConfigName = "log-system-load"
 
+	// GCNeighEntries is used to GC neighbor entries left by a previous running
+	// agent.
+	GCNeighEntries = "neighbor-garbage-collect"
+
 	// PrependIptablesChainsName is the name of the option to enable
 	// prepending iptables chains instead of appending
 	PrependIptablesChainsName = "prepend-iptables-chains"
@@ -1418,6 +1422,10 @@ type DaemonConfig struct {
 	// NeighMapEntriesGlobal is the maximum number of neighbor mappings
 	// allowed in the BPF neigh table
 	NeighMapEntriesGlobal int
+
+	// GCNeighEntries is used to GC neighbor entries left by a previous running
+	// agent.
+	GCNeighEntries bool
 
 	// PolicyMapEntries is the maximum number of peer identities that an
 	// endpoint may allow traffic to exchange traffic with.
@@ -2384,6 +2392,7 @@ func (c *DaemonConfig) Populate() {
 	c.EncryptNode = viper.GetBool(EncryptNode)
 	c.EnvoyLogPath = viper.GetString(EnvoyLog)
 	c.ForceLocalPolicyEvalAtSource = viper.GetBool(ForceLocalPolicyEvalAtSource)
+	c.GCNeighEntries = viper.GetBool(GCNeighEntries)
 	c.HostDevice = getHostDevice()
 	c.HTTPIdleTimeout = viper.GetInt(HTTPIdleTimeout)
 	c.HTTPMaxGRPCTimeout = viper.GetInt(HTTPMaxGRPCTimeout)

@@ -1,4 +1,4 @@
-// Copyright 2018-2019 Authors of Cilium
+// Copyright 2018-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1362,6 +1362,52 @@ func (n *linuxNodeHandler) NodeNeighborRefresh(ctx context.Context, nodeToRefres
 			return
 		case <-refreshComplete:
 			return
+		}
+	}
+}
+
+// NodeCleanNeighbors cleans all neighbor entries for the direct routing device
+// and the encrypt interface. It should be used when the agent changes the
+// state from `n.enableNeighDiscovery = true` to
+// `n.enableNeighDiscovery = false`.
+func (n *linuxNodeHandler) NodeCleanNeighbors() {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	linksToClean := []string{option.Config.DirectRoutingDevice}
+	if option.Config.EncryptInterface != option.Config.DirectRoutingDevice {
+		linksToClean = append(linksToClean, option.Config.EncryptInterface)
+	}
+
+	for _, linkName := range linksToClean {
+		l, err := netlink.LinkByName(linkName)
+		if err != nil {
+			if _, ok := err.(netlink.LinkNotFoundError); !ok {
+				log.WithError(err).WithFields(logrus.Fields{
+					logfields.Device: linkName,
+				}).Error("Unable to GC old neighbor entries for network device")
+			}
+			continue
+		}
+
+		neighList, err := netlink.NeighListExecute(netlink.Ndmsg{
+			Family: netlink.FAMILY_V4,
+			Index:  uint32(l.Attrs().Index),
+			State:  netlink.NUD_PERMANENT,
+		})
+		if err != nil {
+			log.WithError(err).WithFields(logrus.Fields{
+				logfields.Device:    linkName,
+				logfields.LinkIndex: l.Attrs().Index,
+			}).Error("Unable to GC old neighbor entries for network device")
+			continue
+		}
+		for _, neigh := range neighList {
+			err := netlink.NeighDel(&neigh)
+			log.WithError(err).WithFields(logrus.Fields{
+				logfields.Device:    linkName,
+				logfields.LinkIndex: l.Attrs().Index,
+				"neighbor":          neigh.String(),
+			}).Error("Unable to GC old neighbor entry for network device")
 		}
 	}
 }

@@ -389,6 +389,9 @@ func init() {
 	flags.Bool(option.ForceLocalPolicyEvalAtSource, defaults.ForceLocalPolicyEvalAtSource, "Force policy evaluation of all local communication at the source endpoint")
 	option.BindEnv(option.ForceLocalPolicyEvalAtSource)
 
+	flags.Bool(option.GCNeighEntries, false, "Garbage collects, on initialization, L2 entries created by a previous agent if neighbor discovery was enabled")
+	option.BindEnv(option.GCNeighEntries)
+
 	flags.String(option.HTTP403Message, "", "Message returned in proxy L7 403 body")
 	flags.MarkHidden(option.HTTP403Message)
 	option.BindEnv(option.HTTP403Message)
@@ -1475,6 +1478,13 @@ func runDaemon() {
 	// Start periodical arping to refresh neighbor table
 	if d.datapath.Node().NodeNeighDiscoveryEnabled() {
 		d.nodeDiscovery.Manager.StartNeighborRefresh(d.datapath.Node())
+	} else {
+		// clean up all arp PERM entries that might have previously set by
+		// a Cilium instance
+		if option.Config.GCNeighEntries {
+			log.Info("Deleting old neighbor entries left by previous agent")
+			d.datapath.Node().NodeCleanNeighbors()
+		}
 	}
 
 	log.WithField("bootstrapTime", time.Since(bootstrapTimestamp)).
