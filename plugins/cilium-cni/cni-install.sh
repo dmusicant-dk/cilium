@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
@@ -75,7 +75,7 @@ cp "/opt/cni/bin/${BIN_NAME}" "${CNI_DIR}/bin/"
 # It stops this script from touching the host's CNI config directory.
 # However, the agent will still write to the location specified by the
 # `--write-cni-conf-when-ready` flag when `cni.configMap` is set.
-if [ "${CILIUM_CUSTOM_CNI_CONF}" == "true" ]; then
+if [ "${CILIUM_CUSTOM_CNI_CONF}" = "true" ]; then
 	echo "User is managing Cilium's CNI config externally, exiting..."
 	exit 0
 fi
